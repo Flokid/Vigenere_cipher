@@ -1,114 +1,161 @@
-import os
 import tkinter as tk
-from PIL import Image, ImageTk
+from tkinter import ttk
+from ciphers.Vigenere_cipher import VigenereCipher
+from ciphers.Simple_permutation_cipher import SimplePermutationCipher
 
 
-def is_russian(text):
-    russian_letters = {'а', 'б', 'в', 'г', 'д', 'е', 'ё', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с',
-                       'т', 'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', 'я'}
-    text_lower = text.lower()
-    russian_count = sum(1 for char in text_lower if char in russian_letters)
-    return russian_count / len(text_lower) > 0.1
+class CipherApp:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Приложение для шифрования")
 
+        self.frame = ttk.Frame(master)
+        self.frame.pack(padx=10, pady=10)
 
-def generate_key(string, key):
-    key = list(key)
-    if len(string) == len(key):
-        return key
-    else:
-        for i in range(len(string) - len(key)):
-            key.append(key[i % len(key)])
-            print(key)
-    return "".join(key)
+        self.create_widgets()
 
+    def create_widgets(self):
+        ttk.Label(self.frame, text="Выберите тип шифра:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.cipher_type_menu = ttk.Combobox(self.frame, values=["Виженера", "Простой перестановки"])
+        self.cipher_type_menu.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        self.cipher_type_menu.set("Виженера")
+        self.cipher_type_menu.bind("<<ComboboxSelected>>", self.toggle_key_entry)
 
-def create_vigenere_table(alphabet):
-    table = []
-    for i in range(len(alphabet)):
-        row = alphabet[i:] + alphabet[:i]
-        table.append(row)
-    return table
+        ttk.Label(self.frame, text="Выберите язык:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.language_menu = ttk.Combobox(self.frame, values=["английский", "русский"])
+        self.language_menu.grid(row=1, column=1, padx=5, pady=5, sticky="w")
+        self.language_menu.set("английский")
 
+        self.key_label = ttk.Label(self.frame, text="Введите ключ:")
+        self.key_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.key_entry = ttk.Entry(self.frame)
+        self.key_entry.grid(row=2, column=1, padx=5, pady=5, sticky="w")
 
-def encryption(text, key, alphabet):
-    table = create_vigenere_table(alphabet)
+        ttk.Label(self.frame, text="Введите текст:").grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        self.text_entry = ttk.Entry(self.frame)
+        self.text_entry.grid(row=3, column=1, padx=5, pady=5, sticky="w")
 
-    encrypted_text = ''
-    key_index = 0
+        ttk.Button(self.frame, text="Зашифровать", command=self.encrypt_text).grid(row=4, column=0, padx=5, pady=5,
+                                                                                   sticky="w")
+        ttk.Button(self.frame, text="Расшифровать", command=self.create_decryption_window).grid(row=4, column=1, padx=5, pady=5,
+                                                                                    sticky="w")
 
-    for char in text:
-        if char.lower() in alphabet:
-            char_index = alphabet.index(char.lower())
-            row_index = alphabet.index(key[key_index].lower())
-            new_char = table[row_index][char_index]
-            encrypted_text += new_char.upper() if char.isupper() else new_char
-            key_index = (key_index + 1) % len(key)
+        ttk.Button(self.frame, text="Очистить", command=self.clear_text).grid(row=5, column=0, columnspan=2,
+                                                                               padx=5, pady=5, sticky="w")
+
+        ttk.Button(self.frame, text="Копировать зашифрованный текст", command=self.copy_encrypted_text).grid(row=6, column=0, columnspan=2,
+                                                                              padx=5, pady=5, sticky="w")
+        ttk.Button(self.frame, text="Копировать расшифрованный текст", command=self.copy_decrypted_text).grid(row=9,
+                                                                                                             column=0,
+                                                                                                             columnspan=2,
+                                                                                                             padx=5,
+                                                                                                             pady=5,
+                                                                                                             sticky="w")
+
+        self.encrypted_result_label = ttk.Label(self.frame, text="")
+        self.encrypted_result_label.grid(row=7, column=0, columnspan=2, padx=5, pady=5, sticky="w")
+
+        self.decrypted_result_label = ttk.Label(self.frame, text="")
+        self.decrypted_result_label.grid(row=8, column=0, columnspan=2, padx=5, pady=5, sticky="w")
+
+    def toggle_key_entry(self, event):
+        selected_cipher = self.cipher_type_menu.get()
+        if selected_cipher == "Простой перестановки":
+            self.key_label.grid_remove()
+            self.key_entry.grid_remove()
         else:
-            encrypted_text += char
+            self.key_label.grid()
+            self.key_entry.grid()
 
-    return encrypted_text
+    def get_cipher(self):
+        cipher_type = self.cipher_type_menu.get()
+        language = self.language_menu.get()
+        key = self.key_entry.get()
+        text = self.text_entry.get()
 
+        if cipher_type == "Виженера":
+            if language == "английский":
+                alphabet = 'english'
+            else:
+                alphabet = 'russian'
+            return VigenereCipher(alphabet=alphabet), text, key if key else None
+        elif cipher_type == "Простой перестановки":
+            if language == "английский":
+                alphabet = 'english'
+            else:
+                alphabet = 'russian'
+            return SimplePermutationCipher(alphabet=alphabet), text
 
-def decryption(encrypted_text, key, alphabet):
-    table = create_vigenere_table(alphabet)
+    def encrypt_text(self):
+        cipher_type = self.cipher_type_menu.get()
+        if cipher_type == "Виженера":
+            cipher, text, key = self.get_cipher()
+            result = cipher.encryption(text, key)
+            self.encrypted_result_label.config(text=f"Зашифрованный текст: {result}")
+        elif cipher_type == "Простой перестановки":
+            cipher, text = self.get_cipher()
+            result = cipher.encryption(text)
+            self.encrypted_result_label.config(text=f"Зашифрованный текст: {result}")
 
-    decrypted_text = ''
-    key_index = 0
+    def create_decryption_window(self):
+        decryption_window = tk.Toplevel(self.master)
+        decryption_window.title("Расшифровка")
 
-    for char in encrypted_text:
-        if char.lower() in alphabet:
-            char_index = table[alphabet.index(key[key_index].lower())].index(char.lower())
-            new_char = alphabet[char_index]
-            decrypted_text += new_char.upper() if char.isupper() else new_char
-            key_index = (key_index + 1) % len(key)
-        else:
-            decrypted_text += char
+        ttk.Label(decryption_window, text="Введите текст:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        text_entry = ttk.Entry(decryption_window)
+        text_entry.grid(row=0, column=1, padx=5, pady=5, sticky="w")
 
-    return decrypted_text
+        ttk.Button(decryption_window, text="Расшифровать",
+                   command=lambda: self.decrypt_text_in_window(decryption_window, text_entry)).grid(row=1, column=0,
+                                                                                                    columnspan=2,
+                                                                                                    padx=5, pady=5,
+                                                                                                    sticky="w")
 
+        ttk.Button(decryption_window, text="Вставить скопированный текст",
+                   command=lambda: self.paste_text(text_entry)).grid(row=2, column=0, columnspan=2, padx=5, pady=5,
+                                                                     sticky="w")
 
-def on_encrypt():
-    string = entry_string.get()
-    keyword = entry_keyword.get().replace(" ", "")
-    key = generate_key(string, keyword)
-    if is_russian(string):
-        russian_alphabet = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя'
-        encrypt_text = encryption(string, key, russian_alphabet)
-        result_label.config(
-            text=f"Encrypted message: {encrypt_text}\nKeyword: {keyword}\nDecrypted message: {decryption(encrypt_text, key, russian_alphabet)}")
-    else:
-        english_alphabet = 'abcdefghijklmnopqrstuvwxyz'
-        encrypt_text = encryption(string, key, english_alphabet)
-        result_label.config(
-            text=f"Encrypted message: {encrypt_text}\nKeyword: {keyword}\nDecrypted message: {decryption(encrypt_text, key, english_alphabet)}")
+    def decrypt_text_in_window(self, window, text_entry):
+        cipher_type = self.cipher_type_menu.get()
+        encrypted_text = text_entry.get()
+        if cipher_type == "Виженера":
+            cipher, text, key = self.get_cipher()
+            result = cipher.decryption(encrypted_text, key)
+            self.decrypted_result_label.config(text=f"Расшифрованный текст: {result}")
+        elif cipher_type == "Простой перестановки":
+            cipher, text = self.get_cipher()
+            result = cipher.decryption(encrypted_text)
+            self.decrypted_result_label.config(text=f"Расшифрованный текст: {result}")
+        window.destroy()
 
+    def clear_text(self):
+        self.text_entry.delete(0, tk.END)
+        self.encrypted_result_label.config(text="")
+        self.decrypted_result_label.config(text="")
+        self.key_entry.delete(0, tk.END)
 
-gui = tk.Tk()
-gui.title("Vigenere Encryption")
-gui.geometry("1920x1080")
-bg_image_path = os.path.join("bg/piggy.jpg")
+    def copy_encrypted_text(self):
+        full_text = self.encrypted_result_label.cget("text")
+        start_index = full_text.find("Зашифрованный текст:") + len("Зашифрованный текст:")
+        encrypted_text = full_text[start_index:].strip()
+        self.master.clipboard_clear()
+        self.master.clipboard_append(encrypted_text)
 
-image = Image.open(bg_image_path)
-photo = ImageTk.PhotoImage(image)
+    def copy_decrypted_text(self):
+        full_text = self.decrypted_result_label.cget("text")
+        start_index = full_text.find("Расшифрованный текст:") + len("Расшифрованный текст:")
+        decrypted_text = full_text[start_index:].strip()
+        self.master.clipboard_clear()
+        self.master.clipboard_append(decrypted_text)
 
-background_label = tk.Label(gui, image=photo)
-background_label.place(x=0, y=0, relwidth=1, relheight=1)
+    def paste_text(self, text_entry):
+        text_to_paste = self.master.clipboard_get()
+        if text_to_paste:
+            text_entry.delete(0, tk.END)
+            text_entry.insert(0, text_to_paste)
 
-label_string = tk.Label(gui, text="Enter the message:")
-label_string.pack()
-entry_string = tk.Entry(gui)
-entry_string.pack()
-
-label_keyword = tk.Label(gui, text="Enter the keyword:")
-label_keyword.pack()
-entry_keyword = tk.Entry(gui)
-entry_keyword.pack()
-
-button_encrypt = tk.Button(gui, text="Encrypt/Decrypt", command=on_encrypt)
-button_encrypt.pack()
-
-result_label = tk.Label(gui, text="")
-result_label.pack()
 
 if __name__ == "__main__":
-    gui.mainloop()
+    root = tk.Tk()
+    app = CipherApp(root)
+    root.mainloop()
