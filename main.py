@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from ciphers.Vigenere_cipher import VigenereCipher
 from ciphers.Simple_permutation_cipher import SimplePermutationCipher
-
+import ciphers.Kuznyechik_Cipher as kuz
 
 class CipherApp:
     def __init__(self, master):
@@ -16,12 +16,13 @@ class CipherApp:
 
     def create_widgets(self):
         ttk.Label(self.frame, text="Выберите тип шифра:").grid(row=0, column=0, padx=5, pady=5, sticky="w")
-        self.cipher_type_menu = ttk.Combobox(self.frame, values=["Виженера", "Простой перестановки"])
+        self.cipher_type_menu = ttk.Combobox(self.frame, values=["Виженера", "Простой перестановки", "Кузнечика в режиме гаммирования"])
         self.cipher_type_menu.grid(row=0, column=1, padx=5, pady=5, sticky="w")
         self.cipher_type_menu.set("Виженера")
         self.cipher_type_menu.bind("<<ComboboxSelected>>", self.toggle_key_entry)
 
-        ttk.Label(self.frame, text="Выберите язык:").grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.language_label = ttk.Label(self.frame, text="Введите ключ:")
+        self.language_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
         self.language_menu = ttk.Combobox(self.frame, values=["английский", "русский"])
         self.language_menu.grid(row=1, column=1, padx=5, pady=5, sticky="w")
         self.language_menu.set("английский")
@@ -63,6 +64,9 @@ class CipherApp:
         if selected_cipher == "Простой перестановки":
             self.key_label.grid_remove()
             self.key_entry.grid_remove()
+        elif selected_cipher == "Кузнечика в режиме гаммирования":
+            self.language_menu.grid_remove()
+            self.language_label.grid_remove()
         else:
             self.key_label.grid()
             self.key_entry.grid()
@@ -85,6 +89,8 @@ class CipherApp:
             else:
                 alphabet = 'russian'
             return SimplePermutationCipher(alphabet=alphabet), text
+        elif cipher_type == "Кузнечика в режиме гаммирования":
+            return key, text
 
     def encrypt_text(self):
         cipher_type = self.cipher_type_menu.get()
@@ -95,6 +101,11 @@ class CipherApp:
         elif cipher_type == "Простой перестановки":
             cipher, text = self.get_cipher()
             result = cipher.encryption(text)
+            self.encrypted_result_label.config(text=f"Зашифрованный текст: {result}")
+        elif cipher_type == "Кузнечика в режиме гаммирования":
+            key, text = self.get_cipher()
+            K = kuz.getKeys(key)
+            result = kuz.encrypt(text, K)
             self.encrypted_result_label.config(text=f"Зашифрованный текст: {result}")
 
     def create_decryption_window(self):
@@ -125,6 +136,11 @@ class CipherApp:
         elif cipher_type == "Простой перестановки":
             cipher, text = self.get_cipher()
             result = cipher.decryption(encrypted_text)
+            self.decrypted_result_label.config(text=f"Расшифрованный текст: {result}")
+        elif cipher_type == "Кузнечика в режиме гаммирования":
+            key, text = self.get_cipher()
+            K = kuz.getKeys(key)
+            result = kuz.decrypt(encrypted_text, K)
             self.decrypted_result_label.config(text=f"Расшифрованный текст: {result}")
         window.destroy()
 
